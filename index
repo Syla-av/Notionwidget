@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="es">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rastreador de Racha</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    main {
+      min-height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 24px;
+      padding: 48px 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #2d3748;
+      margin: 0 0 16px 0;
+    }
+
+    .streak-display {
+      font-size: 80px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 24px 0;
+      line-height: 1;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: #718096;
+      margin-bottom: 32px;
+      font-weight: 500;
+    }
+
+    .mark-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .mark-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .mark-button:active {
+      transform: translateY(0);
+    }
+
+    .mark-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .calendar-section {
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 2px solid #e2e8f0;
+    }
+
+    .calendar-title {
+      font-size: 16px;
+      color: #4a5568;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .calendar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .day {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .day.done {
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      box-shadow: 0 2px 8px rgba(72, 187, 120, 0.4);
+    }
+
+    .day.miss {
+      background: #cbd5e0;
+    }
+
+    .day.today {
+      border: 2px solid #667eea;
+    }
+
+    .notification {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      font-weight: 600;
+      color: #2d3748;
+      opacity: 0;
+      transition: all 0.4s ease;
+      z-index: 1000;
+      max-width: 90%;
+    }
+
+    .notification.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .notification.success {
+      border-left: 4px solid #48bb78;
+    }
+
+    .notification.info {
+      border-left: 4px solid #667eea;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 32px 24px;
+      }
+
+      .title {
+        font-size: 24px;
+      }
+
+      .streak-display {
+        font-size: 64px;
+      }
+
+      .day {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <main>
+   <div class="container">
+    <h1 class="title" id="titleText">🔥 Racha</h1>
+    <div class="streak-display" id="streakDisplay">
+     0
+    </div>
+    <p class="subtitle">días consecutivos</p><button class="mark-button" id="markButton">Activar racha hoy</button>
+    <div class="calendar-section">
+     <div class="calendar-title">
+      Últimos 14 días
+     </div>
+     <div class="calendar" id="calendar"></div>
+    </div>
+   </div>
+  </main>
+  <div class="notification" id="notification"></div>
+  <script>
+    const defaultConfig = {
+      title_text: "🔥 Racha",
+      button_text: "Activar racha hoy",
+      already_marked_message: "¡Hoy ya marcaste tu racha!",
+      primary_color: "#667eea",
+      accent_color: "#764ba2",
+      success_color: "#48bb78",
+      text_color: "#2d3748",
+      font_family: "Inter",
+      font_size: 16
+    };
+
+    let streakCount = 0;
+    let markedDates = [];
+
+    function todayStr() {
+      return new Date().toISOString().split("T")[0];
+    }
+
+    function showNotification(message, type = 'info') {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.className = `notification ${type}`;
+      notification.classList.add('show');
+
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
+    function calculateStreak(dates) {
+      if (dates.length === 0) return 0;
+
+      const sortedDates = dates
+        .map(d => new Date(d))
+        .sort((a, b) => b - a);
+
+      let streak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let checkDate = new Date(today);
+
+      for (let date of sortedDates) {
+        date.setHours(0, 0, 0, 0);
+        
+        if (date.getTime() === checkDate.getTime()) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else if (date < checkDate) {
+          break;
+        }
+      }
+
+      return streak;
+    }
+
+    function renderCalendar() {
+      const cal = document.getElementById("calendar");
+      cal.innerHTML = "";
+
+      const today = todayStr();
+
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().split("T")[0];
+
+        const div = document.createElement("div");
+        div.classList.add("day");
+
+        if (markedDates.includes(ds)) {
+          div.classList.add("done");
+        } else if (d < new Date()) {
+          div.classList.add("miss");
+        }
+
+        if (ds === today) {
+          div.classList.add("today");
+        }
+
+        cal.appendChild(div);
+      }
+    }
+
+    function renderUI() {
+      document.getElementById("streakDisplay").textContent = streakCount;
+      renderCalendar();
+    }
+
+    async function markToday() {
+      const button = document.getElementById('markButton');
+      button.disabled = true;
+
+      const today = todayStr();
+
+      if (markedDates.includes(today)) {
+        const config = window.elementSdk ? window.elementSdk.config : defaultConfig;
+        showNotification(config.already_marked_message || defaultConfig.already_marked_message, 'info');
+        button.disabled = false;
+        return;
+      }
+
+      const result = await window.dataSdk.create({
+        date: today,
+        marked: true
+      });
+
+      button.disabled = false;
+
+      if (result.isOk) {
+        showNotification('¡Racha activada! 🎉', 'success');
+      } else {
+        showNotification('Error al guardar. Intenta de nuevo.', 'info');
+      }
+    }
+
+    const dataHandler = {
+      onDataChanged(data) {
+        markedDates = data.map(record => record.date);
+        streakCount = calculateStreak(markedDates);
+        renderUI();
+      }
+    };
+
+    async function onConfigChange(config) {
+      const titleElement = document.getElementById('titleText');
+      const buttonElement = document.getElementById('markButton');
+      
+      titleElement.textContent = config.title_text || defaultConfig.title_text;
+      buttonElement.textContent = config.button_text || defaultConfig.button_text;
+
+      const primaryColor = config.primary_color || defaultConfig.primary_color;
+      const accentColor = config.accent_color || defaultConfig.accent_color;
+      const successColor = config.success_color || defaultConfig.success_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const fontSize = config.font_size || defaultConfig.font_size;
+
+      document.querySelector('main').style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`;
+      document.querySelector('.streak-display').style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`;
+      document.querySelector('.streak-display').style.webkitBackgroundClip = 'text';
+      document.querySelector('.streak-display').style.webkitTextFillColor = 'transparent';
+      document.querySelector('.streak-display').style.backgroundClip = 'text';
+      
+      document.querySelector('.mark-button').style.background = `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`;
+      document.querySelector('.mark-button').style.boxShadow = `0 4px 15px ${primaryColor}66`;
+      
+      titleElement.style.color = textColor;
+      titleElement.style.fontFamily = `${fontFamily}, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+      titleElement.style.fontSize = `${fontSize * 2}px`;
+      
+      buttonElement.style.fontFamily = `${fontFamily}, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+      buttonElement.style.fontSize = `${fontSize * 1.125}px`;
+
+      const doneElements = document.querySelectorAll('.day.done');
+      doneElements.forEach(el => {
+        el.style.background = `linear-gradient(135deg, ${successColor} 0%, ${successColor}dd 100%)`;
+      });
+    }
+
+    async function init() {
+      const initResult = await window.dataSdk.init(dataHandler);
+      
+      if (!initResult.isOk) {
+        console.error("Error al inicializar Data SDK");
+        return;
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.primary_color || defaultConfig.primary_color,
+                set: (value) => {
+                  config.primary_color = value;
+                  window.elementSdk.setConfig({ primary_color: value });
+                }
+              },
+              {
+                get: () => config.accent_color || defaultConfig.accent_color,
+                set: (value) => {
+                  config.accent_color = value;
+                  window.elementSdk.setConfig({ accent_color: value });
+                }
+              },
+              {
+                get: () => config.success_color || defaultConfig.success_color,
+                set: (value) => {
+                  config.success_color = value;
+                  window.elementSdk.setConfig({ success_color: value });
+                }
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (value) => {
+                  config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (value) => {
+                config.font_family = value;
+                window.elementSdk.setConfig({ font_family: value });
+              }
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (value) => {
+                config.font_size = value;
+                window.elementSdk.setConfig({ font_size: value });
+              }
+            }
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["title_text", config.title_text || defaultConfig.title_text],
+            ["button_text", config.button_text || defaultConfig.button_text],
+            ["already_marked_message", config.already_marked_message || defaultConfig.already_marked_message]
+          ])
+        });
+      }
+
+      document.getElementById('markButton').addEventListener('click', markToday);
+    }
+
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a331a6ce6e0cc7a',t:'MTc2MzkyNjQ1OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
