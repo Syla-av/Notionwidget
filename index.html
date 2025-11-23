@@ -12,28 +12,53 @@
     font-family: 'Inter', sans-serif;
     background: transparent;
     color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
   }
 
   .widget {
-    width: 260px;
+    width: 280px;
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 14px;
     background: rgba(20, 20, 35, 0.85);
     backdrop-filter: blur(6px);
     border: 1px solid rgba(120, 120, 255, 0.3);
-    box-shadow: 0 0 18px rgba(120, 120, 255, 0.25);
+    box-shadow: 0 0 20px rgba(120, 120, 255, 0.25);
+    text-align: center;
   }
 
   .title {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
+    margin-bottom: 16px;
+    color: #B4B8FF;
+    text-shadow: 0 0 8px rgba(150, 160, 255, 0.5);
+  }
+
+  .racha-container {
+    font-size: 50px;
+    font-weight: bold;
+    color: #00f5d4; /* neón turquesa */
+    text-shadow: 0 0 6px #00f5d4, 0 0 12px #00f5d4, 0 0 18px #00f5d4;
+    margin-bottom: 16px;
+  }
+
+  .ultima-activacion {
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #6366F1;
+    background: rgba(60, 60, 90, 0.6);
+    display: inline-block;
     margin-bottom: 12px;
     color: #B4B8FF;
-    text-shadow: 0 0 6px rgba(150, 160, 255, 0.5);
+    text-shadow: 0 0 4px rgba(150,160,255,0.5);
   }
 
   .stat {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     font-size: 14px;
     display: flex;
     justify-content: space-between;
@@ -64,8 +89,14 @@
   <div class="widget">
     <div class="title">🌌 Racha Cósmica</div>
 
-    <div class="stat"><span>Racha actual:</span> <span id="racha">0</span></div>
-    <div class="stat"><span>Última activación:</span> <span id="ultima">—</span></div>
+    <div class="racha-container" id="rachaDisplay">
+      0 🔥
+    </div>
+
+    <div class="ultima-activacion" id="ultima">
+      Última: —
+    </div>
+
     <div class="stat"><span>Días inactivos:</span> <span id="inactivos">0</span></div>
 
     <button class="button" id="activarBtn">Activar día ✨</button>
@@ -80,8 +111,8 @@ let ultimaFecha = localStorage.getItem("ultimaFecha") || null;
 let diasInactivos = parseInt(localStorage.getItem("diasInactivos")) || 0;
 
 // Mostrar en pantalla
-document.getElementById("racha").innerText = racha;
-document.getElementById("ultima").innerText = ultimaFecha ? ultimaFecha : "—";
+document.getElementById("rachaDisplay").innerText = `${racha} 🔥`;
+document.getElementById("ultima").innerText = ultimaFecha ? `Última: ${ultimaFecha}` : "Última: —";
 document.getElementById("inactivos").innerText = diasInactivos;
 
 // Calcular días no activados desde la última activación
@@ -120,8 +151,8 @@ document.getElementById("activarBtn").onclick = () => {
   localStorage.setItem("racha", racha);
   localStorage.setItem("ultimaFecha", ultimaFecha);
 
-  document.getElementById("racha").innerText = racha;
-  document.getElementById("ultima").innerText = ultimaFecha;
+  document.getElementById("rachaDisplay").innerText = `${racha} 🔥`;
+  document.getElementById("ultima").innerText = `Última: ${ultimaFecha}`;
 
   enviarNotion(hoy, true);
 };
