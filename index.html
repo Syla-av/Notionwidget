@@ -3,112 +3,143 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Widget Racha Espacial</title>
+<title>Widget Espacial Notion</title>
 
 <style>
-    body {
-        margin: 0;
-        padding: 0;
-        background: radial-gradient(circle at center, #0a0a18, #000000);
-        font-family: "Inter", sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        color: white;
-    }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background: transparent;
+    color: #f0f0f0;
+  }
 
-    .widget {
-        background: rgba(255, 255, 255, 0.07);
-        padding: 25px 35px;
-        border-radius: 20px;
-        text-align: center;
-        box-shadow: 0 0 20px rgba(150, 150, 255, 0.3),
-                    0 0 40px rgba(80, 80, 200, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(6px);
-        width: 260px;
-    }
+  .widget {
+    width: 260px;
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(20, 20, 35, 0.85);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(120, 120, 255, 0.3);
+    box-shadow: 0 0 18px rgba(120, 120, 255, 0.25);
+  }
 
-    .titulo {
-        font-size: 1.2rem;
-        margin-bottom: 10px;
-        letter-spacing: 1px;
-        color: #9bc7ff;
-        text-shadow: 0 0 8px rgba(150, 200, 255, 0.6);
-    }
+  .title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #B4B8FF;
+    text-shadow: 0 0 6px rgba(150, 160, 255, 0.5);
+  }
 
-    .racha {
-        font-size: 3rem;
-        font-weight: 700;
-        margin: 10px 0 25px;
-        color: #ffffff;
-        text-shadow: 0 0 12px rgba(160, 160, 255, 0.7);
-    }
+  .stat {
+    margin-bottom: 10px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
 
-    button {
-        background: linear-gradient(135deg, #4a5bff, #7b9aff);
-        border: none;
-        padding: 12px 20px;
-        border-radius: 12px;
-        color: white;
-        font-size: 1rem;
-        cursor: pointer;
-        font-weight: 500;
-        width: 100%;
-        transition: 0.2s;
-        box-shadow: 0 0 10px rgba(120, 150, 255, 0.4);
-    }
+  .button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #6366F1;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    transition: 0.2s;
+  }
 
-    button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 15px rgba(150, 180, 255, 0.6);
-    }
-
-    .mensaje {
-        font-size: 0.85rem;
-        margin-top: 10px;
-        opacity: 0.8;
-        color: #d0d8ff;
-    }
+  .button:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 15px rgba(140, 142, 255, 0.5);
+  }
 </style>
 </head>
 
 <body>
+  <div class="widget">
+    <div class="title">🌌 Racha Cósmica</div>
 
-<div class="widget">
-    <div class="titulo">Racha Cósmica</div>
-    <div class="racha" id="rachaDisplay">0</div>
-    <button id="botonRacha">✨ Activar Racha Hoy</button>
-    <div class="mensaje" id="mensaje"></div>
-</div>
+    <div class="stat"><span>Racha actual:</span> <span id="racha">0</span></div>
+    <div class="stat"><span>Última activación:</span> <span id="ultima">—</span></div>
+    <div class="stat"><span>Días inactivos:</span> <span id="inactivos">0</span></div>
+
+    <button class="button" id="activarBtn">Activar día ✨</button>
+  </div>
 
 <script>
-    function formatoFecha(fecha) {
-        return fecha.toISOString().split("T")[0];
+const ENDPOINT = "https://sparkling-faloodeh-c1dd3a.netlify.app/.netlify/functions/guardarDia";
+
+// Cargar estado local
+let racha = parseInt(localStorage.getItem("racha")) || 0;
+let ultimaFecha = localStorage.getItem("ultimaFecha") || null;
+let diasInactivos = parseInt(localStorage.getItem("diasInactivos")) || 0;
+
+// Mostrar en pantalla
+document.getElementById("racha").innerText = racha;
+document.getElementById("ultima").innerText = ultimaFecha ? ultimaFecha : "—";
+document.getElementById("inactivos").innerText = diasInactivos;
+
+// Calcular días no activados desde la última activación
+function calcularDiasInactivos() {
+  if (!ultimaFecha) return;
+
+  let hoy = new Date();
+  let ultima = new Date(ultimaFecha);
+
+  let diff = Math.floor((hoy - ultima) / (1000 * 60 * 60 * 24));
+
+  if (diff > 1) {
+    let faltantes = diff - 1;
+    diasInactivos += faltantes;
+
+    // Guardar días inactivos en Notion
+    for (let i = 1; i <= faltantes; i++) {
+      let fechaInactiva = new Date(ultima);
+      fechaInactiva.setDate(ultima.getDate() + i);
+
+      enviarNotion(fechaInactiva.toISOString().slice(0,10), false);
     }
+  }
 
-    let racha = parseInt(localStorage.getItem("racha") || 0);
-    let ultimoDia = localStorage.getItem("ultimoDia");
-    const hoy = formatoFecha(new Date());
+  localStorage.setItem("diasInactivos", diasInactivos);
+  document.getElementById("inactivos").innerText = diasInactivos;
+}
 
-    document.getElementById("rachaDisplay").innerText = racha;
+// Registrar activación
+document.getElementById("activarBtn").onclick = () => {
+  let hoy = new Date().toISOString().slice(0,10);
 
-    document.getElementById("botonRacha").addEventListener("click", () => {
-        const hoy = formatoFecha(new Date());
+  racha++;
+  ultimaFecha = hoy;
 
-        if (ultimoDia === hoy) {
-            document.getElementById("mensaje").innerText = "✨ Ya activaste la racha hoy";
-            return;
-        }
+  localStorage.setItem("racha", racha);
+  localStorage.setItem("ultimaFecha", ultimaFecha);
 
-        racha++;
-        localStorage.setItem("racha", racha);
-        localStorage.setItem("ultimoDia", hoy);
+  document.getElementById("racha").innerText = racha;
+  document.getElementById("ultima").innerText = ultimaFecha;
 
-        document.getElementById("rachaDisplay").innerText = racha;
-        document.getElementById("mensaje").innerText = "🌟 Racha activada";
+  enviarNotion(hoy, true);
+};
+
+// Enviar datos al backend
+async function enviarNotion(fecha, activado) {
+  try {
+    await fetch(ENDPOINT, {
+      method: "POST",
+      body: JSON.stringify({ fecha, activado })
     });
+  } catch (error) {
+    console.error("Error enviando a Notion:", error);
+  }
+}
+
+// Ejecutar al cargar
+calcularDiasInactivos();
 </script>
 
 </body>
