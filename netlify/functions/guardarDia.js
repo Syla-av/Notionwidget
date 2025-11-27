@@ -1,49 +1,56 @@
-// netlify/functions/guardarDia.js
-
-const fetch = require("node-fetch");
-
 exports.handler = async (event, context) => {
-  try {
-    const body = JSON.parse(event.body);
+    // Aceptamos solo POST
+    if (event.httpMethod !== "POST") {
+        return {
+            statusCode: 405,
+            body: JSON.stringify({ error: "Método no permitido. Usa POST." })
+        };
+    }
 
-    const { fecha, activado } = body;
+    try {
+        // Parsear el body que envía el widget
+        const { ultimaActivacion, rachaActual, diasInactivos } = JSON.parse(event.body);
 
-    const NOTION_KEY = process.env.NOTION_KEY;
-    const DATABASE_ID = process.env.DATABASE_ID;
+        // Fecha actual en ISO (AAAA-MM-DD)
+        const hoy = new Date().toISOString().split("T")[0];
 
-    const response = await fetch("https://api.notion.com/v1/pages", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${NOTION_KEY}`,
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        parent: { database_id: DATABASE_ID },
-        properties: {
-          Fecha: {
-            date: {
-              start: fecha
+        // Si es la primera vez que se activa
+        let nuevaRacha = rachaActual;
+        let nuevosInactivos = diasInactivos;
+
+        // Calcular días de diferencia entre hoy y la última activación
+        if (ultimaActivacion) {
+            const ultima = new Date(ultimaActivacion);
+            const actual = new Date(hoy);
+            const diff = Math.floor((actual - ultima) / (1000 * 60 * 60 * 24));
+
+            if (diff === 1) {
+                // Activación consecutiva → sumar 1 a la racha
+                nuevaRacha = rachaActual + 1;
+            } else if (diff > 1) {
+                // No se activa desde hace varios días → sumar días inactivos
+                nuevosInactivos = diasInactivos + (diff - 1);
+                nuevaRacha = rachaActual + 1; // La racha continúa, no se rompe
             }
-          },
-          Activado: {
-            checkbox: activado
-          }
+        } else {
+            // Primera activación en la historia
+            nuevaRacha = 1;
         }
-      })
-    });
 
-    const data = await response.json();
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: "Día registrado correctamente",
+                ultimaActivacion: hoy,
+                rachaActual: nuevaRacha,
+                diasInactivos: nuevosInactivos
+            })
+        };
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ ok: true, data })
-    };
-
-  } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ ok: false, error: error.message })
-    };
-  }
+    } catch (error) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "Error procesando datos", detalles: error.message })
+        };
+    }
 };
