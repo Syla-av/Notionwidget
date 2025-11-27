@@ -1,54 +1,49 @@
 // netlify/functions/guardarDia.js
 
-import fetch from "node-fetch";
+const fetch = require("node-fetch");
 
-export const handler = async (event) => {
+exports.handler = async (event, context) => {
   try {
-    const { habitId, today } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
 
-    // Esto es un ejemplo — pon aquí tu Notion token y database
-    const NOTION_TOKEN = process.env.NOTION_TOKEN;
-    const DATABASE_ID = process.env.NOTION_DAYS_DB;
+    const { fecha, activado } = body;
 
-    if (!NOTION_TOKEN || !DATABASE_ID) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Faltan variables de entorno" })
-      };
-    }
+    const NOTION_KEY = process.env.NOTION_KEY;
+    const DATABASE_ID = process.env.DATABASE_ID;
 
-    // Crear página en la base de datos
-    const notionResponse = await fetch("https://api.notion.com/v1/pages", {
+    const response = await fetch("https://api.notion.com/v1/pages", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${NOTION_TOKEN}`,
+        "Authorization": `Bearer ${NOTION_KEY}`,
+        "Notion-Version": "2022-06-28",
         "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
       },
       body: JSON.stringify({
         parent: { database_id: DATABASE_ID },
         properties: {
-          "Hábito": {
-            relation: [{ id: habitId }]
+          Fecha: {
+            date: {
+              start: fecha
+            }
           },
-          "Fecha": {
-            date: { start: today }
+          Activado: {
+            checkbox: activado
           }
         }
       })
     });
 
-    const data = await notionResponse.json();
+    const data = await response.json();
 
     return {
       statusCode: 200,
       body: JSON.stringify({ ok: true, data })
     };
 
-  } catch (err) {
+  } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ ok: false, error: error.message })
     };
   }
 };
