@@ -1,56 +1,54 @@
-exports.handler = async (event, context) => {
-    // Aceptamos solo POST
-    if (event.httpMethod !== "POST") {
-        return {
-            statusCode: 405,
-            body: JSON.stringify({ error: "Método no permitido. Usa POST." })
-        };
+// netlify/functions/guardarDia.js
+
+import fetch from "node-fetch";
+
+export const handler = async (event) => {
+  try {
+    const { habitId, today } = JSON.parse(event.body);
+
+    // Esto es un ejemplo — pon aquí tu Notion token y database
+    const NOTION_TOKEN = process.env.NOTION_TOKEN;
+    const DATABASE_ID = process.env.NOTION_DAYS_DB;
+
+    if (!NOTION_TOKEN || !DATABASE_ID) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Faltan variables de entorno" })
+      };
     }
 
-    try {
-        // Parsear el body que envía el widget
-        const { ultimaActivacion, rachaActual, diasInactivos } = JSON.parse(event.body);
-
-        // Fecha actual en ISO (AAAA-MM-DD)
-        const hoy = new Date().toISOString().split("T")[0];
-
-        // Si es la primera vez que se activa
-        let nuevaRacha = rachaActual;
-        let nuevosInactivos = diasInactivos;
-
-        // Calcular días de diferencia entre hoy y la última activación
-        if (ultimaActivacion) {
-            const ultima = new Date(ultimaActivacion);
-            const actual = new Date(hoy);
-            const diff = Math.floor((actual - ultima) / (1000 * 60 * 60 * 24));
-
-            if (diff === 1) {
-                // Activación consecutiva → sumar 1 a la racha
-                nuevaRacha = rachaActual + 1;
-            } else if (diff > 1) {
-                // No se activa desde hace varios días → sumar días inactivos
-                nuevosInactivos = diasInactivos + (diff - 1);
-                nuevaRacha = rachaActual + 1; // La racha continúa, no se rompe
-            }
-        } else {
-            // Primera activación en la historia
-            nuevaRacha = 1;
+    // Crear página en la base de datos
+    const notionResponse = await fetch("https://api.notion.com/v1/pages", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${NOTION_TOKEN}`,
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+      },
+      body: JSON.stringify({
+        parent: { database_id: DATABASE_ID },
+        properties: {
+          "Hábito": {
+            relation: [{ id: habitId }]
+          },
+          "Fecha": {
+            date: { start: today }
+          }
         }
+      })
+    });
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: "Día registrado correctamente",
-                ultimaActivacion: hoy,
-                rachaActual: nuevaRacha,
-                diasInactivos: nuevosInactivos
-            })
-        };
+    const data = await notionResponse.json();
 
-    } catch (error) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: "Error procesando datos", detalles: error.message })
-        };
-    }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ ok: true, data })
+    };
+
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message })
+    };
+  }
 };
