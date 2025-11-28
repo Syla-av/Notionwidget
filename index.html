@@ -156,11 +156,14 @@ document.getElementById("activarBtn").onclick = () => {
   enviarNotion(hoy, true);
 };
 
-// Enviar datos al backend
+// Enviar datos al backend (CORREGIDO)
 async function enviarNotion(fecha, activado) {
   try {
     await fetch(ENDPOINT, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ fecha, activado })
     });
   } catch (error) {
