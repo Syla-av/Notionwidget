@@ -1,7 +1,5 @@
 // netlify/functions/guardarDia.js
 
-const fetch = require("node-fetch");
-
 exports.handler = async (event, context) => {
   try {
     const body = JSON.parse(event.body);
