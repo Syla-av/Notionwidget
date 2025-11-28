@@ -1,5 +1,4 @@
 // netlify/functions/guardarDia.js
-const fetch = require("node-fetch");
 
 exports.handler = async (event, context) => {
   try {
@@ -20,12 +19,12 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const { Nombre, Fecha, Casilla, Texto } = body;
+    const { fecha, activado } = body;
 
-    if (!Nombre || !Fecha) {
+    if (!fecha) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ ok: false, error: "Faltan propiedades requeridas" })
+        body: JSON.stringify({ ok: false, error: "Falta la propiedad 'fecha'" })
       };
     }
 
@@ -42,22 +41,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         parent: { database_id: DATABASE_ID },
         properties: {
-          Nombre: {
-            title: [
-              { text: { content: Nombre } }
-            ]
-          },
-          Fecha: {
-            date: { start: Fecha }
-          },
-          Casilla: {
-            checkbox: Casilla === true
-          },
-          Texto: {
-            rich_text: [
-              { text: { content: Texto || "" } }
-            ]
-          }
+          Fecha: { date: { start: fecha } },
+          Activado: { checkbox: activado === true }
         }
       })
     });
