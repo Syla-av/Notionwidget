@@ -1,63 +1,132 @@
-// netlify/functions/guardarDia.js
+import fetch from "node-fetch";
 
-exports.handler = async (event, context) => {
+export const handler = async (event) => {
+  // --- CABECERAS CORS PARA NOTION / IFRAMES ---
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS"
+  };
+
+  // --- RESPUESTA AL PREFLIGHT ---
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers,
+      body: "OK"
+    };
+  }
+
+  // --- ASEGURAR QUE SEA POST ---
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        error: "Método no permitido, usa POST"
+      })
+    };
+  }
+
+  // --- VALIDAR BODY ---
+  if (!event.body) {
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        error: "No se envió ningún body"
+      })
+    };
+  }
+
+  let data;
   try {
-    if (!event.body) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ ok: false, error: "No se envió ningún body" })
-      };
-    }
+    data = JSON.parse(event.body);
+  } catch (err) {
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        error: "JSON inválido enviado al servidor"
+      })
+    };
+  }
 
-    let body;
-    try {
-      body = JSON.parse(event.body);
-    } catch (err) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ ok: false, error: "JSON inválido en el body" })
-      };
-    }
+  const { fecha, activado } = data;
 
-    const { fecha, activado } = body;
+  if (!fecha || activado === undefined) {
+    return {
+      statusCode: 400,
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        error: "Faltan datos: se requiere { fecha, activado }"
+      })
+    };
+  }
 
-    if (!fecha) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ ok: false, error: "Falta la propiedad 'fecha'" })
-      };
-    }
+  // --- TU DATABASE DE NOTION ---
+  const NOTION_DATABASE = "TU_DATABASE_ID";
+  const NOTION_TOKEN = "TU_TOKEN_SECRETO";
 
-    const NOTION_KEY = process.env.NOTION_KEY;
-    const DATABASE_ID = process.env.DATABASE_ID;
-
-    const response = await fetch("https://api.notion.com/v1/pages", {
+  // --- INSERTAR EN NOTION ---
+  try {
+    const notionResponse = await fetch("https://api.notion.com/v1/pages", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${NOTION_KEY}`,
+        "Authorization": `Bearer ${NOTION_TOKEN}`,
         "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        parent: { database_id: DATABASE_ID },
+        parent: { database_id: NOTION_DATABASE },
         properties: {
-          Fecha: { date: { start: fecha } },
-          Activado: { checkbox: activado === true }
+          Fecha: {
+            date: { start: fecha }
+          },
+          Activado: {
+            checkbox: activado
+          }
         }
       })
     });
 
-    const data = await response.json();
+    const notionData = await notionResponse.json();
+
+    if (!notionResponse.ok) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          ok: false,
+          error: "Error en Notion",
+          detail: notionData
+        })
+      };
+    }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ ok: true, data })
+      headers,
+      body: JSON.stringify({
+        ok: true,
+        enviado: data,
+        notion: notionData
+      })
     };
 
-  } catch (error) {
+  } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ ok: false, error: error.message })
+      headers,
+      body: JSON.stringify({
+        ok: false,
+        error: "Error conectando con Notion",
+        detail: err.message
+      })
     };
   }
 };
