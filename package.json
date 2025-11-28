@@ -1,0 +1,21 @@
+{
+  "name": "notion-widget-cosmico",
+  "version": "1.0.0",
+  "description": "Widget espacial con integración a Notion vía Netlify Functions",
+  "private": true,
+  "license": "MIT",
+
+  "engines": {
+    "node": ">=18"
+  },
+
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'Static widget, no build step required'",
+    "start": "netlify dev"
+  },
+
+  "dependencies": {
+    "node-fetch": "3.3.2"
+  }
+}
