@@ -1,10 +1,33 @@
 // netlify/functions/guardarDia.js
+const fetch = require("node-fetch");
 
 exports.handler = async (event, context) => {
   try {
-    const body = JSON.parse(event.body);
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ ok: false, error: "No se envió ningún body" })
+      };
+    }
 
-    const { fecha, activado } = body;
+    let body;
+    try {
+      body = JSON.parse(event.body);
+    } catch (err) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ ok: false, error: "JSON inválido en el body" })
+      };
+    }
+
+    const { Nombre, Fecha, Casilla, Texto } = body;
+
+    if (!Nombre || !Fecha) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ ok: false, error: "Faltan propiedades requeridas" })
+      };
+    }
 
     const NOTION_KEY = process.env.NOTION_KEY;
     const DATABASE_ID = process.env.DATABASE_ID;
@@ -19,13 +42,21 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         parent: { database_id: DATABASE_ID },
         properties: {
-          Fecha: {
-            date: {
-              start: fecha
-            }
+          Nombre: {
+            title: [
+              { text: { content: Nombre } }
+            ]
           },
-          Activado: {
-            checkbox: activado
+          Fecha: {
+            date: { start: Fecha }
+          },
+          Casilla: {
+            checkbox: Casilla === true
+          },
+          Texto: {
+            rich_text: [
+              { text: { content: Texto || "" } }
+            ]
           }
         }
       })
